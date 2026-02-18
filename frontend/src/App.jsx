@@ -125,8 +125,8 @@ function Layout({ children }) {
         <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.6 }}>
             <div style={{ color: 'var(--accent)', marginBottom: 2 }}>● MICROSERVICES</div>
-            <div>Catalog</div>
-            <div>Orders</div>
+            <div>Catalogss</div>
+            <div>Orderss</div>
           </div>
         </div>
       </aside>
