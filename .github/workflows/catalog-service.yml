@@ -14,7 +14,7 @@ env:
   AKS_RESOURCE_GROUP: cloud-order-rg
   AKS_CLUSTER: cloud-order-aks
   NAMESPACE: cloud-order-system
-  INGRESS_IP: 20.76.220.235
+  INGRESS_IP: 20.76.150.23
 
 jobs:
   test:
@@ -118,4 +118,3 @@ jobs:
       
       - run: az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --overwrite-existing
       - run: kubectl set image deployment/catalog-service catalog-service=${{ needs.deploy.outputs.previous-image }} -n ${{ env.NAMESPACE }}
-c
