@@ -126,7 +126,7 @@ function Layout({ children }) {
           <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.6 }}>
             <div style={{ color: 'var(--accent)', marginBottom: 2 }}>● MICROSERVICES</div>
             <div>Catalogss</div>
-            <div>Orderss</div>
+            <div>Ordersss</div>
           </div>
         </div>
       </aside>
