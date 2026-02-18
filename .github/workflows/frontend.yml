@@ -15,7 +15,7 @@ env:
   AKS_CLUSTER: cloud-order-aks
   NAMESPACE: cloud-order-system
 
-jobs:
+jobs: 
   build-and-deploy:
     runs-on: ubuntu-latest
     

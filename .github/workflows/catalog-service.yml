@@ -8,17 +8,13 @@ on:
       - '.github/workflows/catalog-service.yml'
   workflow_dispatch:
 
-permissions:
-  id-token: write
-  contents: read
-
 env:
   ACR_NAME: cloudorder2026acr
   IMAGE_NAME: catalog-service
   AKS_RESOURCE_GROUP: cloud-order-rg
   AKS_CLUSTER: cloud-order-aks
   NAMESPACE: cloud-order-system
-  INGRESS_IP: 20.76.150.23
+  INGRESS_IP: 20.76.220.235
 
 jobs:
   test:
@@ -31,12 +27,10 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         working-directory: ./catalog-service
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
       - name: Run unit tests
         working-directory: ./catalog-service
-        run: |
-          pytest tests/ -v --tb=short
+        run: pytest tests/ -v --tb=short
 
   build:
     name: Build and Push
@@ -50,9 +44,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       
       - name: ACR Login
         run: az acr login --name ${{ env.ACR_NAME }}
@@ -81,9 +73,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       
       - name: Get AKS credentials
         run: az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --overwrite-existing
@@ -124,9 +114,8 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       
       - run: az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --overwrite-existing
       - run: kubectl set image deployment/catalog-service catalog-service=${{ needs.deploy.outputs.previous-image }} -n ${{ env.NAMESPACE }}
+c
