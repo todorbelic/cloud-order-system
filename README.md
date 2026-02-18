@@ -1,9 +1,5 @@
 # Cloud Order System
 
-**Predmet**: Računarstvo u oblaku  
-**Student**: [Tvoje Ime i Prezime]  
-**Broj indeksa**: [Tvoj broj indeksa]
-
 ## Opis projekta
 
 Cloud-native aplikacija za kreiranje narudžbina i asinhrono generisanje PDF faktura. Sistem je implementiran kao mikroservisna arhitektura deployovana na Azure Kubernetes Service (AKS) i Azure Container Apps.
