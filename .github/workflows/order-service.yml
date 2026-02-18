@@ -1,0 +1,100 @@
+name: Build and Deploy Order Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'order-service/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: cloudorder2026acr
+  IMAGE_NAME: order-service
+  AKS_RESOURCE_GROUP: cloud-order-rg
+  AKS_CLUSTER: cloud-order-aks
+  NAMESPACE: cloud-order-system
+  INGRESS_IP: 20.76.150.23
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - working-directory: ./order-service
+        run: pip install -r requirements.txt
+      - working-directory: ./order-service
+        run: pytest tests/ -v
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      image-tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - run: az acr login --name ${{ env.ACR_NAME }}
+      - id: tag
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+      - working-directory: ./order-service
+        run: |
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }} .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      previous-image: ${{ steps.prev.outputs.image }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - run: az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --overwrite
+      - id: prev
+        run: echo "image=$(kubectl get deployment/order-service -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.template.spec.containers[0].image}')" >> $GITHUB_OUTPUT
+      - run: |
+          kubectl set image deployment/order-service order-service=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image-tag }} -n ${{ env.NAMESPACE }}
+          kubectl rollout status deployment/order-service -n ${{ env.NAMESPACE }} --timeout=5m
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install requests
+      - run: sleep 30
+      - env:
+          CATALOG_URL: http://${{ env.INGRESS_IP }}/api/catalog
+          ORDER_URL: http://${{ env.INGRESS_IP }}/api/orders
+        run: python tests/integration_tests.py
+
+  rollback:
+    runs-on: ubuntu-latest
+    needs: [deploy, integration-test]
+    if: failure()
+    steps:
+      - uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - run: az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --overwrite
+      - run: kubectl set image deployment/order-service order-service=${{ needs.deploy.outputs.previous-image }} -n ${{ env.NAMESPACE }}

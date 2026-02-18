@@ -1,0 +1,132 @@
+name: Build and Deploy Catalog Service
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'catalog-service/**'
+      - '.github/workflows/catalog-service.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: cloudorder2026acr
+  IMAGE_NAME: catalog-service
+  AKS_RESOURCE_GROUP: cloud-order-rg
+  AKS_CLUSTER: cloud-order-aks
+  NAMESPACE: cloud-order-system
+  INGRESS_IP: 20.76.150.23
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        working-directory: ./catalog-service
+        run: |
+          pip install -r requirements.txt
+      - name: Run unit tests
+        working-directory: ./catalog-service
+        run: |
+          pytest tests/ -v --tb=short
+
+  build:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      image-tag: ${{ steps.set-tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: ACR Login
+        run: az acr login --name ${{ env.ACR_NAME }}
+      
+      - id: set-tag
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+      
+      - name: Build and Push
+        working-directory: ./catalog-service
+        run: |
+          IMAGE_TAG=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ steps.set-tag.outputs.tag }}
+          IMAGE_LATEST=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+          docker build -t $IMAGE_TAG -t $IMAGE_LATEST .
+          docker push $IMAGE_TAG
+          docker push $IMAGE_LATEST
+
+  deploy:
+    name: Deploy to AKS
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      previous-image: ${{ steps.save-previous.outputs.previous-image }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Get AKS credentials
+        run: az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --overwrite-existing
+      
+      - id: save-previous
+        run: |
+          PREVIOUS_IMAGE=$(kubectl get deployment/catalog-service -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.template.spec.containers[0].image}')
+          echo "previous-image=$PREVIOUS_IMAGE" >> $GITHUB_OUTPUT
+      
+      - name: Deploy
+        run: |
+          kubectl set image deployment/catalog-service catalog-service=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image-tag }} -n ${{ env.NAMESPACE }}
+          kubectl rollout status deployment/catalog-service -n ${{ env.NAMESPACE }} --timeout=5m
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install requests pytest
+      - run: sleep 30
+      - name: Run tests
+        env:
+          CATALOG_URL: http://${{ env.INGRESS_IP }}/api/catalog
+          ORDER_URL: http://${{ env.INGRESS_IP }}/api/orders
+        run: python tests/integration_tests.py
+
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    needs: [deploy, integration-test]
+    if: failure()
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - run: az aks get-credentials --resource-group ${{ env.AKS_RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --overwrite-existing
+      - run: kubectl set image deployment/catalog-service catalog-service=${{ needs.deploy.outputs.previous-image }} -n ${{ env.NAMESPACE }}
