@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: invoice-worker-config
+  namespace: cloud-order-system
+data:
+  ORDER_DB_HOST: "order-db-service"
+  ORDER_DB_PORT: "5432"
+  ORDER_DB_NAME: "orderdb"
+  ORDER_DB_USER: "orderuser"
+  AZURE_QUEUE_NAME: "invoice-queue"
+  AZURE_BLOB_CONTAINER_INVOICES: "invoices"
+  POLL_INTERVAL_SECONDS: "5"

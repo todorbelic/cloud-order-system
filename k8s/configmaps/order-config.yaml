@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-config
+  namespace: cloud-order-system
+data:
+  ORDER_DB_HOST: "order-db-service"
+  ORDER_DB_PORT: "5432"
+  ORDER_DB_NAME: "orderdb"
+  ORDER_DB_USER: "orderuser"
+  ORDER_SERVICE_HOST: "0.0.0.0"
+  ORDER_SERVICE_PORT: "5002"
+  CATALOG_SERVICE_URL: "http://catalog-service:5001"
+  AZURE_QUEUE_NAME: "invoice-queue"
+  AZURE_BLOB_CONTAINER_INVOICES: "invoices"
+  FLASK_DEBUG: "false"
