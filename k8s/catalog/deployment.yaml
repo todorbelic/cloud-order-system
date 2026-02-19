@@ -27,6 +27,10 @@ spec:
                 secretKeyRef:
                   name: catalog-db-secret
                   key: CATALOG_DB_PASSWORD
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /health
@@ -46,6 +50,13 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "catalog-db-secrets"
 ---
 apiVersion: v1
 kind: Service

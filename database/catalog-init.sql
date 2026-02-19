@@ -26,14 +26,14 @@ CREATE TRIGGER update_products_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 INSERT INTO products (code, name, image_url, price, stock_quantity) VALUES
-    ('PROD-001', 'Laptop Dell XPS 15', 'https://via.placeholder.com/300x300.png?text=Laptop', 1299.99, 15),
-    ('PROD-002', 'Wireless Mouse Logitech MX Master', 'https://via.placeholder.com/300x300.png?text=Mouse', 99.99, 50),
-    ('PROD-003', 'Mechanical Keyboard Keychron K2', 'https://via.placeholder.com/300x300.png?text=Keyboard', 89.99, 30),
-    ('PROD-004', 'USB-C Hub 7-in-1', 'https://via.placeholder.com/300x300.png?text=USB-Hub', 49.99, 100),
-    ('PROD-005', 'Monitor LG UltraWide 34"', 'https://via.placeholder.com/300x300.png?text=Monitor', 599.99, 20),
-    ('PROD-006', 'Webcam Logitech C920', 'https://via.placeholder.com/300x300.png?text=Webcam', 79.99, 45),
-    ('PROD-007', 'Headphones Sony WH-1000XM4', 'https://via.placeholder.com/300x300.png?text=Headphones', 349.99, 25),
-    ('PROD-008', 'External SSD Samsung T7 1TB', 'https://via.placeholder.com/300x300.png?text=SSD', 129.99, 60)
+    ('PROD-001', 'Laptop Dell XPS 15', 'https://cloudorderstorage2026.blob.core.windows.net/product-images/laptop.jpg', 1299.99, 15),
+    ('PROD-002', 'Wireless Mouse Logitech MX Master', 'https://cloudorderstorage2026.blob.core.windows.net/product-images/mouse.jpg', 99.99, 50),
+    ('PROD-003', 'Mechanical Keyboard Keychron K2', 'https://cloudorderstorage2026.blob.core.windows.net/product-images/keyboard.jpg', 89.99, 30),
+    ('PROD-004', 'USB-C Hub 7-in-1', 'https://cloudorderstorage2026.blob.core.windows.net/product-images/hub.jpg', 49.99, 100),
+    ('PROD-005', 'Monitor LG UltraWide 34"', 'https://cloudorderstorage2026.blob.core.windows.net/product-images/monitor.jpg', 599.99, 20),
+    ('PROD-006', 'Webcam Logitech C920', 'https://cloudorderstorage2026.blob.core.windows.net/product-images/camera.jpg', 79.99, 45),
+    ('PROD-007', 'Headphones Sony WH-1000XM4', 'https://cloudorderstorage2026.blob.core.windows.net/product-images/headphones.jpg', 349.99, 25),
+    ('PROD-008', 'External SSD Samsung T7 1TB', 'https://cloudorderstorage2026.blob.core.windows.net/product-images/ssd.jpg', 129.99, 60)
 ON CONFLICT (code) DO NOTHING;
 
 DO $$

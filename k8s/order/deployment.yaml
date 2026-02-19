@@ -22,16 +22,22 @@ spec:
             - configMapRef:
                 name: order-config
           env:
+            # Order DB password iz Key Vault
             - name: ORDER_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: order-db-secret
                   key: ORDER_DB_PASSWORD
+            # Azure Storage connection string iz Key Vault
             - name: AZURE_STORAGE_CONNECTION_STRING
               valueFrom:
                 secretKeyRef:
                   name: azure-storage-secret
                   key: AZURE_STORAGE_CONNECTION_STRING
+          volumeMounts:
+            - name: secrets-store-order
+              mountPath: "/mnt/secrets-store"
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /health
@@ -51,6 +57,19 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "500m"
+      volumes:
+        - name: secrets-store-order
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "order-db-secrets"
+        - name: secrets-store-storage
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "azure-storage-secrets"
 ---
 apiVersion: v1
 kind: Service
