@@ -1,8 +1,3 @@
-"""
-Invoice Worker
-Čita poruke iz Azure Queue, generiše PDF fakture i uploaduje ih u Blob Storage.
-Zatim poziva Order Service API da ažurira status narudžbine.
-"""
 import json
 import time
 import logging
@@ -21,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 def parse_connection_string(conn_str):
-    """Parsira Azure Storage connection string u dictionary"""
     parts = {}
     for segment in conn_str.split(';'):
         if '=' in segment:
@@ -31,10 +25,6 @@ def parse_connection_string(conn_str):
 
 
 def upload_pdf_to_blob(pdf_bytes, order_number):
-    """
-    Uploaduje PDF u Azure Blob Storage.
-    Vraća SAS token URL koji omogućava direktan download bez autorizacije.
-    """
     blob_name = f"{order_number}.pdf"
 
     blob_service = BlobServiceClient.from_connection_string(
@@ -74,9 +64,7 @@ def upload_pdf_to_blob(pdf_bytes, order_number):
 
 
 def update_order_invoice(order_id, pdf_url):
-    """
-    Poziva Order Service API da ažurira PDF URL i status narudžbine.
-    """
+
     try:
         response = requests.post(
             f"{Config.ORDER_SERVICE_URL}/orders/{order_id}/invoice",
@@ -100,21 +88,17 @@ def update_order_invoice(order_id, pdf_url):
 
 
 def process_message(message_data):
-    """Procesira jednu poruku iz Queue."""
     order_id     = message_data['order_id']
     order_number = message_data['order_number']
 
     logger.info(f"Processing order {order_number} (ID: {order_id})")
 
-    # Korak 1: Generiši PDF
     logger.info(f"Generating PDF for order {order_number}...")
     pdf_bytes = generate_invoice_pdf(message_data)
 
-    # Korak 2: Upload u Blob Storage + SAS URL
     logger.info(f"Uploading PDF to blob storage...")
     pdf_url = upload_pdf_to_blob(pdf_bytes, order_number)
 
-    # Korak 3: Pozovi Order Service API da ažurira invoice
     logger.info(f"Updating order invoice via API...")
     update_order_invoice(order_id, pdf_url)
 
