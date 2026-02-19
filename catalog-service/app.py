@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-
 def get_db_connection():
     try:
         conn = psycopg2.connect(**Config.get_db_params())
